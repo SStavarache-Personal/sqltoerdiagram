@@ -191,8 +191,9 @@ export function parseSchema(sql) {
       continue;
     }
 
-    // ALTER TABLE x ADD [CONSTRAINT y] FOREIGN KEY (a) REFERENCES z (b)
-    const am = stmt.match(/alter\s+table\s+([^\s]+(?:\.[^\s]+)?)\s+add\s+/is);
+    // ALTER TABLE [ONLY] x ADD [CONSTRAINT y] FOREIGN KEY (a) REFERENCES z (b)
+    // (pg_dump emits "ALTER TABLE ONLY schema.table")
+    const am = stmt.match(/alter\s+table\s+(?:only\s+)?([^\s(]+(?:\.[^\s(]+)?)\s+add\s+/is);
     if (am) {
       const t = bareName(am[1]);
       const tail = stmt.slice(am.index + am[0].length);
