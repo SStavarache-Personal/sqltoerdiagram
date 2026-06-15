@@ -491,11 +491,13 @@ for (const [key, d] of Object.entries(DIALECTS)) {
   b.textContent = d.label;
   dialectMenu.appendChild(b);
 }
+const DEFAULT_PLACEHOLDER = 'Paste your CREATE TABLE statements here…';
 function syncDialect() {
   dialectBtn.textContent = DIALECTS[dialect].label;
   for (const el of dialectMenu.querySelectorAll('[data-dialect]'))
     el.classList.toggle('active', el.dataset.dialect === dialect);
   diagram.typeSuggestions = DIALECTS[dialect].types;
+  sqlEl.placeholder = dialect === 'bigquery' ? 'Paste your WITH / CTE query here…' : DEFAULT_PLACEHOLDER;
 }
 syncDialect();
 dialectBtn.addEventListener('click', (e) => {
