@@ -1,6 +1,5 @@
 import './style.css';
 import { parseSchema, FORMATS } from './parse.js';
-import { parseBigQuerySchema } from './parser.js';
 import { layout } from './layout.js';
 import { Diagram } from './diagram.js';
 import { exportSVG } from './svg-export.js';
@@ -257,8 +256,7 @@ function rebuild({ arrange = false, restore = null } = {}) {
 
   let result;
   try {
-    // canvas editing disabled in bigquery mode — parsed nodes carry no source spans
-    result = dialect === 'bigquery' ? parseBigQuerySchema(sql) : parseSchema(sql, formatChoice);
+    result = parseSchema(sql, formatChoice);
   } catch (err) {
     statusEl.textContent = 'Parse error';
     statusEl.className = 'status err';
@@ -309,7 +307,7 @@ function updateStatus(result, sql) {
   const nT = result.tables.length;
   const nR = result.relations.length;
   if (!hasTables && sql.trim()) {
-    statusEl.textContent = dialect === 'bigquery' ? (result.errors[0] || 'No WITH block found') : 'No CREATE TABLE found';
+    statusEl.textContent = result.errors[0] || 'No CREATE TABLE found';
     statusEl.className = 'status warn';
   } else if (hasTables) {
     const fmt = result.format && result.format !== 'sql' ? `${FORMATS[result.format] || result.format} · ` : '';
@@ -323,7 +321,6 @@ function updateStatus(result, sql) {
 
 // ---- canvas editing: edit a table/column on the diagram -> rewrite SQL ----
 diagram.onEdit = (change) => {
-  if (dialect === 'bigquery') { statusEl.textContent = 'Canvas editing is not supported in BigQuery CTE mode'; statusEl.className = 'status warn'; return; }
   const sql = sqlEl.value;
   const fresh = parseSchema(sql, 'sql');   // SQL parser for accurate spans
   const result = applyEdit(sql, fresh, change);
@@ -356,7 +353,6 @@ diagram.typeSuggestions = DIALECTS[dialect].types;
 
 // ---- add column on the canvas -> insert into SQL with the dialect default ----
 diagram.onAddColumn = (tableKey) => {
-  if (dialect === 'bigquery') { statusEl.textContent = 'Canvas editing is not supported in BigQuery CTE mode'; statusEl.className = 'status warn'; return; }
   const sql = sqlEl.value;
   const fresh = parseSchema(sql, 'sql');
   const table = fresh.tables.find(t => t.key === tableKey);
@@ -491,13 +487,11 @@ for (const [key, d] of Object.entries(DIALECTS)) {
   b.textContent = d.label;
   dialectMenu.appendChild(b);
 }
-const DEFAULT_PLACEHOLDER = 'Paste your CREATE TABLE statements here…';
 function syncDialect() {
   dialectBtn.textContent = DIALECTS[dialect].label;
   for (const el of dialectMenu.querySelectorAll('[data-dialect]'))
     el.classList.toggle('active', el.dataset.dialect === dialect);
   diagram.typeSuggestions = DIALECTS[dialect].types;
-  sqlEl.placeholder = dialect === 'bigquery' ? 'Paste your WITH / CTE query here…' : DEFAULT_PLACEHOLDER;
 }
 syncDialect();
 dialectBtn.addEventListener('click', (e) => {
