@@ -444,13 +444,13 @@ function refsFromBody(body) {
   const re = /\b(?:from|join)\s+(`[^`]+`(?:\.[`\w]+)*|[\w$]+(?:\.[\w$]+)*)/gi;
   let m;
   while ((m = re.exec(body)) !== null) {
-    // skip if the match is actually a subquery keyword
-    const name = m[1].trim();
-    if (/^\(/.test(name) || name.includes('(')) continue;
-    names.push(bareId(name).toLowerCase());
+    if (body[re.lastIndex] === '(') continue;   // table-valued function e.g. UNNEST(…)
+    names.push(bareId(m[1]).toLowerCase());
   }
   return names;
 }
+
+function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
 export function parseBigQuerySchema(sql) {
   const original = sql || '';
@@ -532,7 +532,7 @@ export function parseBigQuerySchema(sql) {
     let scanPos = withMatch ? withMatch.index + withMatch[0].length : 0;
     for (const t of tables) {
       // locate "name AS (" in remaining text
-      const re = new RegExp(`\\b${t.name}\\b\\s+as\\s*\\(`, 'i');
+      const re = new RegExp(`\\b${escapeRe(t.name)}\\b\\s+as\\s*\\(`, 'i');
       const m = re.exec(S.slice(scanPos));
       if (!m) continue;
       const absOpen = scanPos + m.index + m[0].length - 1;
